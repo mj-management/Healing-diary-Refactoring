@@ -47,15 +47,17 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ClubService {
 
+
     private final ClubRepository clubRepository;
     private final ClubMemberRepository clubMemberRepository;
     private final ClubTagRepository clubTagRepository;
     private final MemberRepository memberRepository;
     private final NoticeRepository noticeRepository;
     private final TagRepository tagRepository;
-    private final S3StorageClient s3Service;
+    private final S3StorageClient s3StorageClient;
     @Value("${default-image-s3}")
     private String DEFAULT_IMAGE_S3;
+
 
     public Slice<ClubSimpleResponse> getClubListByTag(
         String id,
@@ -99,7 +101,7 @@ public class ClubService {
         List<String> tagList,
         MultipartFile file) throws IOException {
         Member member = memberRepository.findById(Long.parseLong(id)).orElseThrow(()-> new CustomException(MEMBER_NOT_FOUND));
-        String imageUrl = s3Service.uploadFile(file);
+        String imageUrl = s3StorageClient.uploadFile(file);
         Club club = ClubRegisterRequest.toEntity(name, description, member, imageUrl);
         List<ClubTag> tags = tagList
             .stream()
@@ -146,9 +148,9 @@ public class ClubService {
         if (!file.isEmpty()) {
             String preImg = club.getClubImageUrl();
             if (preImg != null && !preImg.startsWith(this.DEFAULT_IMAGE_S3)) {
-                s3Service.deleteFile(preImg);
+                s3StorageClient.deleteFile(preImg);
             }
-            imageUrl = s3Service.uploadFile(file);
+            imageUrl = s3StorageClient.uploadFile(file);
         } else {
             imageUrl = club.getClubImageUrl();
         }

@@ -1,20 +1,20 @@
 package com.ssafy.healingdiary.domain.club.repository;
 
-import static com.ssafy.healingdiary.domain.club.domain.QClub.club;
-import static com.ssafy.healingdiary.domain.club.domain.QClubMember.clubMember;
-import static com.ssafy.healingdiary.domain.member.domain.QMember.member;
-
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.ssafy.healingdiary.domain.club.dto.ClubInvitationResponse;
 import com.ssafy.healingdiary.domain.club.dto.QClubInvitationResponse;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+import static com.ssafy.healingdiary.domain.club.domain.QClubMember.clubMember;
+import static com.ssafy.healingdiary.domain.member.domain.QMember.member;
 
 @Repository
 @RequiredArgsConstructor
