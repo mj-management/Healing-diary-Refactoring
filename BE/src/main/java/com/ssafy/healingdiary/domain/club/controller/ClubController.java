@@ -37,7 +37,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/clubs")
 public class ClubController {
-
     private final ClubService clubService;
 
     @GetMapping

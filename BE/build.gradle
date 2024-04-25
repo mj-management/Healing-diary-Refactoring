@@ -57,6 +57,7 @@ dependencies {
 
 	//redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'com.github.codemonstur:embedded-redis:1.4.3'
 
 	//swagger
 	implementation 'io.springfox:springfox-swagger2:2.9.2'
@@ -68,6 +69,7 @@ dependencies {
 
 	//S3
 	implementation 'com.amazonaws:aws-java-sdk-s3:1.12.387'
+	implementation 'io.findify:s3mock_2.13:0.2.6'
 
 	implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
 
@@ -87,7 +89,7 @@ tasks.named('test') {
 }
 
 // querydsl 사용할 경로 지정합니다. 현재 지정한 부분은 .gitignore에 포함되므로 git에 올라가지 않습니다.
-def querydslDir = "$buildDir/generated/'querydsl'"
+def querydslDir = "$buildDir/generated/querydsl"
 
 // JPA 사용여부 및 사용 경로 설정
 querydsl {
