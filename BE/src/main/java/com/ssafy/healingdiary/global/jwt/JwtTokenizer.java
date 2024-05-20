@@ -64,10 +64,9 @@ public class JwtTokenizer {
     }
 
     // 리프레쉬 토큰 생성 메서드
-    public String createRefreshToken(String id, List<String> roleList) {
+    public String createRefreshToken(String id) {
         Key key = getKeyFromEncodedKey(encodeBase64SecretKey(this.secretKey));
         Claims claims = Jwts.claims().setSubject(id);
-        claims.put("roles", roleList);
 
         Date currenttime = new Date();
         Date expiration = this.getTokenExpiration(this.refreshtokenExpiration);
@@ -97,6 +96,13 @@ public class JwtTokenizer {
         calendar.add(Calendar.MINUTE, expirationminutes); // 현재 시간에서 토큰 만기 시간만큼 추가해서 저장됨
         Date expirationTime = calendar.getTime();
         return expirationTime;
+    }
+
+    public Date getTokenExpiration(String token) {
+        Jws<Claims> claims = getClaims(token);
+        Claims claim = claims.getBody();
+        Date expiration = claim.get("exp", Date.class);
+        return expiration;
     }
 
     public String getId(String token) {

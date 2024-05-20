@@ -25,7 +25,7 @@ public class LoginResponse {
 
     private String jwtToken;
 
-    public static LoginResponse toEntity(Member member, String jwtToken) {
+    public static LoginResponse of(Member member, String jwtToken) {
         return LoginResponse.builder()
                 .id(member.getId())
                 .email(member.getProviderEmail())

@@ -1,15 +1,16 @@
 package com.ssafy.healingdiary.domain.member.service;
 
 import com.ssafy.healingdiary.domain.member.domain.Member;
+import com.ssafy.healingdiary.domain.member.domain.Token;
 import com.ssafy.healingdiary.domain.member.dto.MemberInfoResponse;
 import com.ssafy.healingdiary.domain.member.dto.MemberUpdateResponse;
 import com.ssafy.healingdiary.domain.member.dto.NicknameCheckRequest;
 import com.ssafy.healingdiary.domain.member.dto.NicknameCheckResponse;
 import com.ssafy.healingdiary.domain.member.repository.MemberRepository;
+import com.ssafy.healingdiary.domain.member.repository.TokenRepository;
 import com.ssafy.healingdiary.global.error.CustomException;
 import com.ssafy.healingdiary.global.jwt.CookieUtil;
 import com.ssafy.healingdiary.global.jwt.JwtTokenizer;
-import com.ssafy.healingdiary.global.jwt.TokenRegenerateResponse;
 import com.ssafy.healingdiary.global.redis.RedisUtil;
 import com.ssafy.healingdiary.infra.storage.S3StorageClient;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +18,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Date;
 
 import static com.ssafy.healingdiary.global.error.ErrorCode.*;
 
@@ -33,6 +35,7 @@ public class MemberService {
 
     private final S3StorageClient s3Service;
     private final MemberRepository memberRepository;
+    private final TokenRepository tokenRepository;
     private final JwtTokenizer jwtTokenizer;
     private final RedisUtil redisUtil;
     private final CookieUtil cookieUtil;
@@ -112,32 +115,32 @@ public class MemberService {
             throw new CustomException(BAD_REQUEST);
 
         }
-        String memberId = jwtTokenizer.getId(refreshTokenCookie);
-        String refreshTokenInRedis = redisUtil.getToken(memberId);
+        // refresh토큰 조회
+        Token refreshTokenFromDB = tokenRepository.findToken(refreshTokenCookie)
+                .orElseThrow(()-> new CustomException(LOG_OUT));
 
-        if (ObjectUtils.isEmpty(refreshTokenInRedis)) {
-            throw new CustomException(LOG_OUT);
-        }
+        // 새로운 토큰 발급
 
-        if (!refreshTokenInRedis.equals(refreshTokenCookie)) {
-            redisUtil.deleteData(memberId);
-            throw new CustomException(BAD_REQUEST);
-        }
-        redisUtil.deleteData(memberId);
         //엑세스토큰 재발급
+        Member member = refreshTokenFromDB.getMember();
         String newAccessToken = jwtTokenizer.createAccessToken(
-                jwtTokenizer.getUsernameFromToken(refreshTokenInRedis),
-                jwtTokenizer.getRoleListFromToken(refreshTokenInRedis));
+                String.valueOf(refreshTokenFromDB.getMember().getId()),
+                jwtTokenizer.getRoleListFromToken(refreshTokenFromDB.getMember().getRoles()));
         //리프레시토큰 재발급
         String newRefreshToken = jwtTokenizer.createRefreshToken(
-                jwtTokenizer.getUsernameFromToken(refreshTokenInRedis),
-                jwtTokenizer.getRoleListFromToken(refreshTokenInRedis));
+                String.valueOf(member.getId()));
 
-        redisUtil.dataExpirationsInput(memberId, newRefreshToken, 7);
-        TokenRegenerateResponse tokenRegenerateResponse = TokenRegenerateResponse.of(
-                newAccessToken);
+        Date expireDuration = jwtTokenizer.getTokenExpiration(newAccessToken);
+        LocalDateTime exp = new java.sql.Timestamp(expireDuration.getTime())
+                .toLocalDateTime();
+        Token newToken = Token.builder()
+                .member(member)
+                .expiration_date(exp)
+                .refreshToken(newRefreshToken)
+                .build();
+        tokenRepository.save(newToken);
 
-        return cookieUtil.TokenCookie(newRefreshToken, tokenRegenerateResponse);
+        return cookieUtil.tokenCookie(newRefreshToken, newAccessToken);
     }
 
 }

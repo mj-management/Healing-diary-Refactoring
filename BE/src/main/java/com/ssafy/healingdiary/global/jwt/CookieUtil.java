@@ -17,7 +17,7 @@ import static com.ssafy.healingdiary.global.error.ErrorCode.BAD_REQUEST;
 @RequiredArgsConstructor
 public class CookieUtil {
 
-    public ResponseEntity<LoginResponse> HandlerMethod(String refreshToken, LoginResponse loginResponse) {
+    public ResponseEntity<LoginResponse> handlerMethod(String refreshToken, LoginResponse loginResponse) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .maxAge(7 * 24 * 60 * 60) // 쿠키 유효기간 설정 (초 단위)
                 .path("/") // 쿠키의 경로 설정
@@ -34,7 +34,7 @@ public class CookieUtil {
     }
     //쿠키와 dto를 같이 필터에서 던지는 방법을 생각해야함.
 
-    public ResponseEntity<TokenRegenerateResponse> TokenCookie(String refreshToken, TokenRegenerateResponse tokenRegenerateResponse) {
+    public ResponseEntity<String> tokenCookie(String refreshToken, String accessToken) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .maxAge(7 * 24 * 60 * 60) // 쿠키 유효기간 설정 (초 단위)
                 .path("/") // 쿠키의 경로 설정
@@ -46,7 +46,7 @@ public class CookieUtil {
         if (response == null) throw new CustomException(BAD_REQUEST);
         response.setHeader("Set-Cookie", cookie.toString());
 
-        return ResponseEntity.ok(tokenRegenerateResponse);
+        return ResponseEntity.ok(accessToken);
     }
 
 }

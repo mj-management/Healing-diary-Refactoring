@@ -49,7 +49,7 @@ public class OAuthController {
 
     @ApiOperation(value = "회원가입", notes = "회원가입, 어떤 소셜 회원가입인지 넣어주는 것이 중요함")
     @PostMapping("/signup")
-    public ResponseEntity<LoginResponse> googleSignUp(@RequestHeader("Authorization") String accessToken,
+    public ResponseEntity<LoginResponse> signUp(@RequestHeader("Authorization") String accessToken,
                                                       @RequestBody SignupReqDto signupReqDto) {
         try {
             LoginResponse loginResponse = oauthService.signUp(accessToken, signupReqDto);
