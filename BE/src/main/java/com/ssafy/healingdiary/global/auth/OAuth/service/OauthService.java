@@ -3,9 +3,11 @@ package com.ssafy.healingdiary.global.auth.OAuth.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.healingdiary.domain.member.domain.Member;
+import com.ssafy.healingdiary.domain.member.domain.Token;
 import com.ssafy.healingdiary.domain.member.dto.LoginResponse;
 import com.ssafy.healingdiary.domain.member.dto.SignupReqDto;
 import com.ssafy.healingdiary.domain.member.repository.MemberRepository;
+import com.ssafy.healingdiary.domain.member.repository.TokenRepository;
 import com.ssafy.healingdiary.global.auth.OAuth.dto.GoogleOauthTokenResponse;
 import com.ssafy.healingdiary.global.auth.OAuth.dto.KakaoOauthTokenResDto;
 import com.ssafy.healingdiary.global.error.CustomException;
@@ -21,6 +23,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+import java.util.Date;
+
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +38,7 @@ public class OauthService {
     private final RedisUtil redisUtil;
 
     private final MemberRepository memberRepository;
+    private final TokenRepository tokenRepository;
 
     public ResponseEntity<LoginResponse> googleOauthLogin(String accesstoken) throws JsonProcessingException {
         GoogleOauthTokenResponse googleOAuthResponse = this.googleOauthCheckToken(accesstoken);
@@ -43,12 +49,12 @@ public class OauthService {
         }
 
         String jwtToken = jwtTokenizer.createAccessToken(foundMember.getId().toString(), foundMember.getRoleList());
-        String refreshToken = jwtTokenizer.createRefreshToken(foundMember.getId().toString(), foundMember.getRoleList());
+        String refreshToken = jwtTokenizer.createRefreshToken(foundMember.getId().toString());
 
         String memberId = jwtTokenizer.getId(jwtToken);
 
         redisUtil.dataExpirationsInput(memberId, refreshToken, 7);
-        return cookieUtil.HandlerMethod(refreshToken, LoginResponse.toEntity(foundMember, jwtToken));
+        return cookieUtil.handlerMethod(refreshToken, LoginResponse.of(foundMember, jwtToken));
 
     }
 
@@ -61,12 +67,12 @@ public class OauthService {
         }
 
         String jwtToken = jwtTokenizer.createAccessToken(foundMember.getId().toString(), foundMember.getRoleList());
-        String refreshToken = jwtTokenizer.createRefreshToken(foundMember.getId().toString(), foundMember.getRoleList());
+        String refreshToken = jwtTokenizer.createRefreshToken(foundMember.getId().toString());
 
         String memberId = jwtTokenizer.getId(jwtToken);
 
         redisUtil.dataExpirationsInput(memberId, refreshToken, 7);
-        return cookieUtil.HandlerMethod(refreshToken, LoginResponse.toEntity(foundMember, jwtToken));
+        return cookieUtil.handlerMethod(refreshToken, LoginResponse.of(foundMember, jwtToken));
 
 
     }
@@ -90,21 +96,25 @@ public class OauthService {
             throw new CustomException(ErrorCode.CONFLICT);
         }
         String userRole = "USER";
-        Member newMember = Member.googleSignupMember(providerEmail,
-                signupReqDto,
-                googleOauthTokenResponse,
-                userRole);
 
+
+        Member newMember = Member.googleSignupMember(providerEmail, signupReqDto, googleOauthTokenResponse, userRole);
         Member saveUser = memberRepository.save(newMember);
 
-        String jwtToken = jwtTokenizer.createAccessToken(saveUser.getId().toString(), saveUser.getRoleList());
-        String refreshToken = jwtTokenizer.createRefreshToken(saveUser.getId().toString(), saveUser.getRoleList());
+        String accessToken = jwtTokenizer.createAccessToken(saveUser.getId().toString(), saveUser.getRoleList());
+        String refreshToken = jwtTokenizer.createRefreshToken(saveUser.getId().toString());
 
-        String memberId = jwtTokenizer.getId(jwtToken);
+        Date expireDuration = jwtTokenizer.getTokenExpiration(accessToken);
+        LocalDateTime exp = new java.sql.Timestamp(expireDuration.getTime())
+                .toLocalDateTime();
+        Token newToken = Token.builder()
+                .member(newMember)
+                .expiration_date(exp)
+                .refreshToken(refreshToken)
+                .build();
+        tokenRepository.save(newToken);
 
-        redisUtil.dataExpirationsInput(memberId, refreshToken, 7);
-
-        return LoginResponse.toEntity(saveUser, jwtToken);
+        return LoginResponse.of(saveUser, accessToken);
     }
 
     public LoginResponse kakaoSignup(String accesstoken, SignupReqDto signupReqDto)
@@ -121,14 +131,20 @@ public class OauthService {
         Member newMember = Member.kakaoSignupMember(providerEmail, signupReqDto, kakaoOauthTokenResDto, userRole);
         Member saveUser = memberRepository.save(newMember);
 
-        String jwtToken = jwtTokenizer.createAccessToken(saveUser.getId().toString(), saveUser.getRoleList());
-        String refreshToken = jwtTokenizer.createRefreshToken(saveUser.getId().toString(), saveUser.getRoleList());
+        String accessToken = jwtTokenizer.createAccessToken(saveUser.getId().toString(), saveUser.getRoleList());
+        String refreshToken = jwtTokenizer.createRefreshToken(saveUser.getId().toString());
 
-        String memberId = jwtTokenizer.getId(jwtToken);
+        Date expireDuration = jwtTokenizer.getTokenExpiration(accessToken);
+        LocalDateTime exp = new java.sql.Timestamp(expireDuration.getTime())
+                .toLocalDateTime();
+        Token newToken = Token.builder()
+                .member(newMember)
+                .expiration_date(exp)
+                .refreshToken(refreshToken)
+                .build();
+        tokenRepository.save(newToken);
 
-        redisUtil.dataExpirationsInput(memberId, refreshToken, 7);
-
-        return LoginResponse.toEntity(saveUser, jwtToken);
+        return LoginResponse.of(saveUser, accessToken);
     }
 
     public GoogleOauthTokenResponse googleOauthCheckToken(String accesstoken)
