@@ -10,7 +10,7 @@ public interface TokenRepository extends JpaRepository<Token,Long> {
 
     @Query("select t " +
             "from Token t " +
-            "join fetch Member m " +
+            "join fetch t.member m " +
             "where t.refreshToken =:refreshToken")
     Optional<Token> findToken(String refreshToken);
 
